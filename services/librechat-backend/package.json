@@ -4,7 +4,6 @@
   "description": "",
   "workspaces": [
     "api",
-    "client",
     "packages/*"
   ],
   "scripts": {
@@ -42,7 +41,6 @@
     "build:data-provider": "cd packages/data-provider && npm run build",
     "build:api": "cd packages/api && npm run build",
     "build:data-schemas": "cd packages/data-schemas && npm run build",
-    "build:client": "cd client && npm run build",
     "build:client-package": "cd packages/client && npm run build",
     "build:packages": "npm run build:data-provider && npm run build:data-schemas && npm run build:api && npm run build:client-package",
     "frontend": "npm run build:data-provider && npm run build:data-schemas && npm run build:api && npm run build:client-package && cd client && npm run build",
@@ -74,7 +72,6 @@
     "b:build:client-package": "cd packages/client && bun run b:build",
     "b:data-schemas": "cd packages/data-schemas && bun run b:build",
     "b:build:api": "cd packages/api && bun run b:build",
-    "b:build:client": "cd client && bun --bun run b:build",
     "b:client": "bun --bun run b:data && bun --bun run b:data-schemas && bun --bun run b:build:api && bun --bun run b:build:client-package && bun --bun run b:build:client",
     "b:client:dev": "cd client && bun run b:dev",
     "b:test:client": "cd client && bun run b:test",
