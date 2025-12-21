@@ -1,0 +1,20 @@
+{
+  "name": "@packages/shared-types",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "types": "./dist/index.d.ts",
+  "exports" : {
+     ".": {
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc --moduleResolution node",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo node_modules",
+    "type-check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.2"
+  }
+}

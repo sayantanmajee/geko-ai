@@ -1,0 +1,26 @@
+{
+    "name": "@packages/shared-utils",
+    "version": "0.0.1",
+    "private": true,
+    "type": "module",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js"
+        }
+    },
+    "scripts": {
+        "build": "tsc --moduleResolution node",
+        "clean": "rm -rf dist tsconfig.tsbuildinfo node_modules",
+        "type-check": "tsc --noEmit"
+    },
+    "dependencies": {
+        "pino": "^8.16.2"
+    },
+    "devDependencies": {
+        "@packages/shared-types": "workspace:*",
+        "typescript": "^5.9.2"
+    }
+}
