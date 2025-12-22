@@ -42,6 +42,7 @@ router.post('/register', async (req: Request, res: Response, next: NextFunction)
       name: tenantName,
       plan: 'free',
     })
+    console.log("console.log",tenant)
 
     logger.debug('Tenant created', { tenantId: tenant.tenantId })
 
