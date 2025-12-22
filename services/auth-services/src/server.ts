@@ -1,43 +1,84 @@
 /**
  * Auth Service Entry Point
  * 
- * Responsibilities:
- * - Issue JWT tokens (Local + OAuth)
- * - Validate credentials
- * - Manage user identity
- * 
- * TODO:  Implement after DAY 2
+ * Initializes Express server and starts listening. 
  */
 
 import 'dotenv/config'
 import express from 'express'
 import { createLogger } from '@packages/shared-utils'
+import { getConfig, initDb, closeDb } from './config/index'
+import authRoutes from './routes/auth.routes'
+import { errorHandler } from './middleware/error.handler'
 
-const logger = createLogger('auth-service')
+const logger = createLogger('auth-server')
 
-const app: express.Application = express()
-const PORT = parseInt(process.env.AUTH_SERVICE_PORT || '3001', 10)
+async function start() {
+  try {
+    // Load config
+    const config = getConfig()
 
-app.use(express.json())
+    // Initialize database
+    await initDb(config)
 
-// Health check
-app.get('/health', (_req, res) => {
-  res.json({ ok: true, service: 'auth-service' })
-})
+    // Create Express app
+    const app = express()
 
-// TODO: Routes will be added in DAY 2
+    // Middleware
+    app.use(express.json())
+    app.use(express.urlencoded({ extended: true }))
 
-const server = app.listen(PORT, () => {
-  logger.info('Auth service started', { port: PORT })
-})
+    // Request logging
+    app.use((req, res, next) => {
+      logger.debug('Incoming request', {
+        method:  req.method,
+        path: req.path,
+      })
+      next()
+    })
 
-// Graceful shutdown
-process.on('SIGINT', () => {
-  logger.info('SIGINT received, shutting down...')
-  server.close(() => {
-    logger.info('Auth service closed')
-    process.exit(0)
-  })
-})
+    // Health check
+    app.get('/health', (_req, res) => {
+      res.json({ ok: true, service: 'auth-service' })
+    })
 
-export default app
+    // Routes
+    app.use('/v1/auth', authRoutes)
+
+    // 404 handler
+    app.use((req, res) => {
+      res.status(404).json({
+        ok: false,
+        error: 'NOT_FOUND',
+        message: `Route not found: ${req.method} ${req.path}`,
+      })
+    })
+
+    // Error handler (must be last)
+    app.use(errorHandler)
+
+    // Start server
+    const server = app.listen(config.port, () => {
+      logger.info('Auth service started', {
+        port: config.port,
+        environment: config.nodeEnv,
+      })
+      console.log('server auth:', config)
+    })
+
+    // Graceful shutdown
+    process.on('SIGINT', async () => {
+      logger.info('SIGINT received, shutting down.. .')
+      server.close(() => {
+        logger.info('Server closed')
+      })
+      await closeDb()
+      process.exit(0)
+    })
+  } catch (error) {
+    logger.error('Failed to start auth service', { error })
+    process.exit(1)
+  }
+}
+
+start()
