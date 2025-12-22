@@ -1,7 +1,7 @@
 /**
  * Error Handler Middleware
  * 
- * Catches all errors and returns standardized JSON response.
+ * Catches all errors and returns standardized JSON response. 
  */
 
 import { Request, Response, NextFunction } from 'express'
@@ -12,11 +12,13 @@ const logger = createLogger('error-handler')
 export function errorHandler(err: any, req: Request, res: Response, _next: NextFunction) {
   const requestId = req.headers['x-request-id'] as string || 'unknown'
 
+  // Log full error details
   logger.error('Request error', {
     requestId,
     path: req.path,
     method: req.method,
     error: err.message,
+    code: err.code,
     stack: err.stack,
   })
 
@@ -36,11 +38,15 @@ export function errorHandler(err: any, req: Request, res: Response, _next: NextF
     })
   }
 
+  // Log the full error object
+  console.error('FULL ERROR OBJECT:', err)
+  console.error('ERROR STACK:', err.stack)
+
   // Unknown error
   res.status(500).json({
     ok: false,
     error: 'INTERNAL_SERVER_ERROR',
-    message: 'An unexpected error occurred',
+    message: err.message || 'An unexpected error occurred',
     requestId,
   })
 }

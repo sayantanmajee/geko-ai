@@ -1,7 +1,7 @@
 /**
  * Auth Routes
  * 
- * Handles: 
+ * Handles:  
  * - POST /v1/auth/register
  * - POST /v1/auth/login
  * - POST /v1/auth/refresh
@@ -23,16 +23,19 @@ const router: Router = Router()
  * POST /v1/auth/register
  * Register new user + create tenant
  */
-router. post('/register', async (req:  Request, res: Response, next:  NextFunction) => {
+router.post('/register', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { email, password, tenantName } = req.body
 
+    logger.info('Registration endpoint called', { email, tenantName })
+
     // Validate input
     if (!email || !password || !tenantName) {
+      logger.warn('Registration validation failed:  missing fields')
       throw new ValidationError('email, password, and tenantName are required')
     }
 
-    logger.info('Registration request', { email, tenantName })
+    logger.debug('Creating tenant', { tenantName })
 
     // Create tenant
     const tenant = await TenantQueries.create({
@@ -40,11 +43,13 @@ router. post('/register', async (req:  Request, res: Response, next:  NextFuncti
       plan: 'free',
     })
 
+    logger.debug('Tenant created', { tenantId: tenant.tenantId })
+
     // Register user (becomes owner of tenant)
+    logger.debug('Registering user', { email })
     const user = await UserService.register(tenant.tenantId, email, password)
 
-    // Update user role to owner
-    await UserService. updateProfile(user.userId, {})
+    logger.debug('User registered, issuing tokens')
 
     // Issue tokens
     const accessToken = TokenService.issueAccessToken({
@@ -58,23 +63,25 @@ router. post('/register', async (req:  Request, res: Response, next:  NextFuncti
       tenantId: tenant.tenantId,
     })
 
+    logger.info('Registration successful', { userId: user.userId, tenantId: tenant.tenantId })
+
     res.status(201).json({
       ok: true,
       accessToken,
       refreshToken,
       expiresIn: 900,
       user: {
-        userId:  user.userId,
+        userId: user.userId,
         email: user.email,
         name: user.name,
       },
       tenant: {
         tenantId: tenant.tenantId,
-        name: tenant. name,
+        name: tenant.name,
       },
     })
   } catch (error) {
-    logger.error('Registration failed', { error })
+    logger.error('Registration failed', { error, message: (error as Error).message })
     next(error)
   }
 })
@@ -87,11 +94,14 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
   try {
     const { email, password, tenantId } = req.body
 
+    logger.info('Login endpoint called', { email, tenantId })
+
     if (!email || !password) {
+      logger.warn('Login validation failed: missing credentials')
       throw new ValidationError('email and password are required')
     }
 
-    logger.info('Login request', { email })
+    logger.debug('Attempting authentication', { email })
 
     const result = await AuthService.login({
       email,
@@ -101,7 +111,7 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
 
     res.json(result)
   } catch (error) {
-    logger.error('Login failed', { error })
+    logger.error('Login failed', { error, message: (error as Error).message })
     next(error)
   }
 })
@@ -110,9 +120,11 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
  * POST /v1/auth/refresh
  * Refresh access token
  */
-router.post('/refresh', async (req: Request, res:  Response, next: NextFunction) => {
+router.post('/refresh', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { refreshToken } = req.body
+
+    logger.debug('Refresh token endpoint called')
 
     if (!refreshToken) {
       throw new ValidationError('refreshToken is required')
@@ -133,14 +145,19 @@ router.post('/refresh', async (req: Request, res:  Response, next: NextFunction)
  */
 router.get('/me', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const authHeader = req.headers. authorization
+    const authHeader = req.headers.authorization
+
+    logger.debug('Get profile endpoint called')
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       throw new ValidationError('Authorization header required')
     }
 
     const token = authHeader.slice(7)
+    logger.debug('Token extracted from header')
+
     const decoded = TokenService.verifyToken(token)
+    logger.debug('Token verified', { userId: decoded.sub })
 
     const user = await UserService.getProfile(decoded.sub)
 
@@ -158,7 +175,7 @@ router.get('/me', async (req: Request, res: Response, next: NextFunction) => {
  * POST /v1/auth/logout
  * Logout (client-side token deletion, server just acknowledges)
  */
-router.post('/logout', async (req:  Request, res: Response) => {
+router.post('/logout', async (req: Request, res: Response) => {
   logger.info('User logged out')
 
   res.json({

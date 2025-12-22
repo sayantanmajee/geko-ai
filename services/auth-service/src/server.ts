@@ -63,7 +63,6 @@ async function start() {
         port: config.port,
         environment: config.nodeEnv,
       })
-      console.log('server auth:', config)
     })
 
     // Graceful shutdown

@@ -17,7 +17,12 @@ export class UserService {
   /**
    * Register new user (local auth)
    */
-  static async register(tenantId: string, email: string, password: string, name?:  string): Promise<User> {
+  static async register(
+    tenantId: string,
+    email: string,
+    password: string,
+    name?: string
+  ): Promise<User> {
     logger.info('User registration started', { email, tenantId })
 
     // Validate email
@@ -27,7 +32,7 @@ export class UserService {
 
     // Validate password
     const passwordValidation = validatePassword(password, DEFAULT_PASSWORD_POLICY)
-    if(!passwordValidation.ok) {
+    if (!passwordValidation.ok) {
       throw new ValidationError(passwordValidation.reason)
     }
     // if (!this.validatePassword(password)) {
@@ -41,7 +46,7 @@ export class UserService {
     }
 
     // Hash password
-    const passwordHash = await hashPassword(password, 10)
+    const passwordHash = await hashPassword(password)
 
     // Create user
     const user = await UserQueries.create({
@@ -121,12 +126,12 @@ export class UserService {
 
     // Validate new password
     const passwordValidation = validatePassword(newPassword, DEFAULT_PASSWORD_POLICY)
-    if(!passwordValidation.ok) {
+    if (!passwordValidation.ok) {
       throw new ValidationError(passwordValidation.reason)
     }
 
     // Hash new password
-    const newHash = await hashPassword(newPassword, 10)
+    const newHash = await hashPassword(newPassword)
 
     // Update
     await UserQueries.update(userId, { passwordHash: newHash })
