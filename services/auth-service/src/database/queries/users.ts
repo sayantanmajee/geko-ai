@@ -1,62 +1,71 @@
 /**
  * User Queries
  * 
- * Database operations for users.
+ * All database operations for users.
+ * Automatically converts between snake_case (DB) and camelCase (Code).
  */
 
 import { getPool } from '../../config/database'
+import { createLogger } from '@packages/shared-utils'
+import { UserDbRow } from '../types'
 import type { User } from '@packages/shared-types'
+import { generateSelectQuery, mapDbRowToCamelCase } from '../../utils/db-mapper.utils'
 
-interface UserCreateData {
-  tenantId: string
-  email:  string
-  passwordHash?:  string
-  name?:  string
-  role?: 'owner' | 'admin' | 'member'
-}
+const logger = createLogger('user-queries')
 
-interface UserRow {
-  user_id: string
-  tenant_id: string
-  email: string
-  password_hash: string | null
-  name: string | null
-  role: string
-  status: string
-  last_login_at:  string | null
-  created_at: string
-  updated_at:  string
-}
-
-function rowToUser(row: UserRow): User {
-  return {
-    userId: row.user_id,
-    tenantId: row.tenant_id,
-    email: row.email,
-    name: row.name || undefined,
-    role: row.role as any,
-    status: row.status as any,
-    lastLoginAt:  row.last_login_at ?  new Date(row.last_login_at).getTime() : undefined,
-    createdAt: new Date(row.created_at).getTime(),
-    updatedAt: new Date(row.updated_at).getTime(),
-  }
-}
+const USER_COLUMNS = [
+  'user_id',
+  'tenant_id',
+  'email',
+  'password_hash',
+  'name',
+  'role',
+  'status',
+  'last_login_at',
+  'created_at',
+  'updated_at',
+]
 
 export class UserQueries {
   /**
    * Create a new user
    */
-  static async create(data: UserCreateData): Promise<User> {
+  static async create(data: {
+    tenantId: string
+    email:  string
+    passwordHash?:  string
+    name?: string
+    role?: 'owner' | 'admin' | 'member'
+  }): Promise<User> {
     const pool = getPool()
 
-    const result = await pool.query(
-      `INSERT INTO users (tenant_id, email, password_hash, name, role, status)
-       VALUES ($1, $2, $3, $4, $5, 'active')
-       RETURNING *`,
-      [data.tenantId, data.email, data. passwordHash || null, data.name || null, data.role || 'member']
-    )
+    logger.debug('Creating user', { email: data.email, tenantId: data.tenantId })
 
-    return rowToUser(result. rows[0])
+    try {
+      const result = await pool.query(
+        `INSERT INTO users (tenant_id, email, password_hash, name, role, status)
+         VALUES ($1, $2, $3, $4, $5, 'active')
+         RETURNING ${generateSelectQuery(USER_COLUMNS)}`,
+        [
+          data.tenantId,
+          data.email,
+          data.passwordHash || null,
+          data.name || null,
+          data.role || 'member',
+        ]
+      )
+
+      const user = mapDbRowToCamelCase(result.rows[0]) as User
+      logger.debug('User created successfully', { userId: user.userId })
+      return user
+    } catch (error) {
+      logger.error('Failed to create user', {
+        error: (error as Error).message,
+        email: data.email,
+        tenantId: data.tenantId,
+      })
+      throw error
+    }
   }
 
   /**
@@ -66,12 +75,13 @@ export class UserQueries {
     const pool = getPool()
 
     const result = await pool.query(
-      `SELECT * FROM users
+      `SELECT ${generateSelectQuery(USER_COLUMNS)}
+       FROM users
        WHERE user_id = $1 AND deleted_at IS NULL`,
       [userId]
     )
 
-    return result.rows[0] ?  rowToUser(result.rows[0]) : null
+    return result.rows[0] ? (mapDbRowToCamelCase(result.rows[0]) as User) : null
   }
 
   /**
@@ -80,13 +90,16 @@ export class UserQueries {
   static async findByEmail(tenantId: string, email: string): Promise<User | null> {
     const pool = getPool()
 
-    const result = await pool. query(
-      `SELECT * FROM users
+    logger.debug('Finding user by email', { tenantId, email })
+
+    const result = await pool.query(
+      `SELECT ${generateSelectQuery(USER_COLUMNS)}
+       FROM users
        WHERE tenant_id = $1 AND email = $2 AND deleted_at IS NULL`,
       [tenantId, email]
     )
 
-    return result.rows[0] ? rowToUser(result.rows[0]) : null
+    return result.rows[0] ? (mapDbRowToCamelCase(result.rows[0]) as User) : null
   }
 
   /**
@@ -96,12 +109,13 @@ export class UserQueries {
     const pool = getPool()
 
     const result = await pool.query(
-      `SELECT * FROM users
+      `SELECT ${generateSelectQuery(USER_COLUMNS)}
+       FROM users
        WHERE email = $1 AND deleted_at IS NULL`,
       [email]
     )
 
-    return result.rows[0] ?  rowToUser(result.rows[0]) : null
+    return result.rows[0] ? (mapDbRowToCamelCase(result.rows[0]) as User) : null
   }
 
   /**
@@ -110,8 +124,8 @@ export class UserQueries {
   static async update(
     userId: string,
     data: Partial<{
-      name:  string
-      role:  string
+      name: string
+      role: string
       status: string
       lastLoginAt:  number
       passwordHash:  string
@@ -141,7 +155,7 @@ export class UserQueries {
       paramCount++
     }
 
-    if (data.lastLoginAt !== undefined) {
+    if (data. lastLoginAt !== undefined) {
       updates.push(`last_login_at = $${paramCount}`)
       values.push(new Date(data.lastLoginAt))
       paramCount++
@@ -153,14 +167,23 @@ export class UserQueries {
       paramCount++
     }
 
+    if (updates.length === 0) {
+      return (await this.findById(userId)) as User
+    } 
+
     const query = `UPDATE users 
                    SET ${updates.join(', ')}
                    WHERE user_id = $1
-                   RETURNING *`
+                   RETURNING ${generateSelectQuery(USER_COLUMNS)}`
 
-    const result = await pool.query(query, values)
-
-    return rowToUser(result. rows[0])
+    try {
+      const result = await pool.query(query, values)
+      logger.debug('User updated successfully', { userId })
+      return mapDbRowToCamelCase(result.rows[0]) as User
+    } catch (error) {
+      logger.error('Failed to update user', { userId, error })
+      throw error
+    }
   }
 
   /**
@@ -170,8 +193,7 @@ export class UserQueries {
     const pool = getPool()
 
     const result = await pool.query(
-      `SELECT password_hash FROM users
-       WHERE user_id = $1 AND deleted_at IS NULL`,
+      `SELECT password_hash FROM users WHERE user_id = $1 AND deleted_at IS NULL`,
       [userId]
     )
 

@@ -1,11 +1,17 @@
 /**
  * Tenant Queries
  * 
- * Database operations for tenants. 
+ * All database operations for tenants.
  */
 
 import { getPool } from '../../config/database'
+import { createLogger } from '@packages/shared-utils'
 import type { Tenant } from '@packages/shared-types'
+import { generateSelectQuery, mapDbRowToCamelCase } from '../../utils/db-mapper.utils'
+
+const logger = createLogger('tenant-queries')
+
+const TENANT_COLUMNS = ['tenant_id', 'name', 'plan', 'status', 'created_at', 'updated_at']
 
 export class TenantQueries {
   /**
@@ -13,24 +19,30 @@ export class TenantQueries {
    */
   static async create(data: {
     name: string
-    plan?:  'free' | 'pro' | 'enterprise'
+    plan? :  'free' | 'pro' | 'enterprise'
   }): Promise<Tenant> {
     const pool = getPool()
 
-    const result = await pool.query(
-      `INSERT INTO tenants (name, plan, status)
-       VALUES ($1, $2, 'active')
-       RETURNING 
-         tenant_id as tenantId,
-         name,
-         plan,
-         status,
-         created_at as createdAt,
-         updated_at as updatedAt`,
-      [data.name, data.plan || 'free']
-    )
+    logger.debug('Creating tenant', { name: data.name })
 
-    return result.rows[0]
+    try {
+      const result = await pool.query(
+        `INSERT INTO tenants (name, plan, status)
+         VALUES ($1, $2, 'active')
+         RETURNING ${generateSelectQuery(TENANT_COLUMNS)}`,
+        [data.name, data.plan || 'free']
+      )
+
+      const tenant = mapDbRowToCamelCase(result.rows[0]) as Tenant
+      logger. debug('Tenant created successfully', { tenantId: tenant.tenantId })
+      return tenant
+    } catch (error) {
+      logger.error('Failed to create tenant', {
+        error: (error as Error).message,
+        name: data.name,
+      })
+      throw error
+    }
   }
 
   /**
@@ -40,41 +52,29 @@ export class TenantQueries {
     const pool = getPool()
 
     const result = await pool.query(
-      `SELECT 
-         tenant_id as tenantId,
-         name,
-         plan,
-         status,
-         created_at as createdAt,
-         updated_at as updatedAt
+      `SELECT ${generateSelectQuery(TENANT_COLUMNS)}
        FROM tenants
        WHERE tenant_id = $1 AND deleted_at IS NULL`,
       [tenantId]
     )
 
-    return result.rows[0] || null
+    return result.rows[0] ?  (mapDbRowToCamelCase(result.rows[0]) as Tenant) : null
   }
 
   /**
    * Find tenant by name
    */
-  static async findByName(name: string): Promise<Tenant | null> {
+  static async findByName(name:  string): Promise<Tenant | null> {
     const pool = getPool()
 
     const result = await pool.query(
-      `SELECT 
-         tenant_id as tenantId,
-         name,
-         plan,
-         status,
-         created_at as createdAt,
-         updated_at as updatedAt
+      `SELECT ${generateSelectQuery(TENANT_COLUMNS)}
        FROM tenants
        WHERE name = $1 AND deleted_at IS NULL`,
       [name]
     )
 
-    return result.rows[0] || null
+    return result.rows[0] ? (mapDbRowToCamelCase(result.rows[0]) as Tenant) : null
   }
 
   /**
@@ -86,13 +86,13 @@ export class TenantQueries {
   ): Promise<Tenant> {
     const pool = getPool()
 
-    const updates:  string[] = []
-    const values:  any[] = [tenantId]
+    const updates: string[] = []
+    const values: any[] = [tenantId]
     let paramCount = 2
 
     if (data.name !== undefined) {
       updates.push(`name = $${paramCount}`)
-      values. push(data.name)
+      values.push(data.name)
       paramCount++
     }
 
@@ -111,16 +111,9 @@ export class TenantQueries {
     const query = `UPDATE tenants 
                    SET ${updates.join(', ')}
                    WHERE tenant_id = $1
-                   RETURNING 
-                     tenant_id as tenantId,
-                     name,
-                     plan,
-                     status,
-                     created_at as createdAt,
-                     updated_at as updatedAt`
+                   RETURNING ${generateSelectQuery(TENANT_COLUMNS)}`
 
     const result = await pool.query(query, values)
-
-    return result. rows[0]
+    return mapDbRowToCamelCase(result.rows[0]) as Tenant
   }
 }
