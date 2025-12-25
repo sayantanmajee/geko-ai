@@ -2,7 +2,7 @@
   "name": "geko-ai",
   "version": "0.0.1",
   "private": true,
-  "description": "Cloud-first, multi-tenant AI platform",
+  "description": "Unified AI Platform with Local + Cloud Models, Team Collaboration, and Freemium Billing",
   "scripts": {
     "dev": "turbo run dev --parallel",
     "build": "turbo run build",
@@ -12,6 +12,10 @@
     "format": "prettier --write \"**/*.{ts,tsx,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,json,md}\"",
     "clean": "turbo run clean && rm -rf node_modules && pnpm store prune",
+    "docker: build": "docker-compose -f infra/docker-compose.yml build",
+    "docker:up": "docker-compose -f infra/docker-compose.yml up -d",
+    "docker: down": "docker-compose -f infra/docker-compose.yml down",
+    "docker:logs": "docker-compose -f infra/docker-compose.yml logs -f",
     "db:migrate": "turbo run db:migrate"
   },
   "devDependencies": {
