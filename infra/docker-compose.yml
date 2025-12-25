@@ -1,0 +1,258 @@
+# infra/docker-compose.yml
+
+version: '3.8'
+
+services:
+  # ========== DATABASES ==========
+  postgres:
+    image: postgres:16-alpine
+    container_name: geko-postgres
+    ports:
+      - "5432:5432"
+    environment: 
+      POSTGRES_USER: geko
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-dev-password}
+      POSTGRES_DB: geko_ai
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U geko"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - geko-network
+
+  redis:
+    image: redis:7-alpine
+    container_name:  geko-redis
+    ports: 
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - geko-network
+
+  # ========== LIBRECHAT (HANDLES ITS OWN MONGODB) ==========
+  librechat:
+    build: 
+      context: ./services/librechat-backend
+      dockerfile: Dockerfile
+    container_name: geko-librechat
+    ports:
+      - "3080:3080"
+    environment: 
+      NODE_ENV: production
+      PORT: 3080
+      
+      # ⭐ LibreChat will create its own MongoDB
+      # It has built-in MongoDB support - check docker-compose.yml in librechat-backend
+      # For now, we let it manage MongoDB internally
+      
+      # API Keys (add when ready)
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      
+      # Disable LibreChat's built-in auth (we'll proxy through our gateway)
+      ALLOW_SOCIAL_LOGIN: false
+      
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3080/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+    networks:
+      - geko-network
+    restart: unless-stopped
+
+  # ========== GEKO-AI SERVICES ==========
+  auth-service:
+    build:
+      context: ./services/auth-service
+      dockerfile: Dockerfile
+    container_name: geko-auth
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV:  development
+      DB_HOST: postgres
+      DB_PORT:  5432
+      DB_NAME: geko_ai
+      DB_USER: geko
+      DB_PASSWORD: ${DB_PASSWORD:-dev-password}
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-key}
+      PORT: 3001
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - geko-network
+
+  workspace-service:
+    build: 
+      context: ./services/workspace-service
+      dockerfile: Dockerfile
+    container_name: geko-workspace
+    ports:
+      - "3003:3003"
+    environment: 
+      NODE_ENV: development
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: geko_ai
+      DB_USER: geko
+      DB_PASSWORD: ${DB_PASSWORD:-dev-password}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      PORT: 3003
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3003/health"]
+      interval:  10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - geko-network
+
+  model-service:
+    build: 
+      context: ./services/model-service
+      dockerfile: Dockerfile
+    container_name: geko-models
+    ports:
+      - "3005:3005"
+    environment: 
+      NODE_ENV: development
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: geko_ai
+      DB_USER: geko
+      DB_PASSWORD: ${DB_PASSWORD:-dev-password}
+      LIBRECHAT_URL: http://librechat:3080
+      PORT: 3005
+    depends_on:
+      postgres:
+        condition: service_healthy
+      librechat:
+        condition: service_healthy
+    healthcheck: 
+      test: ["CMD", "curl", "-f", "http://localhost:3005/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: 
+      - geko-network
+
+  billing-service:
+    build: 
+      context: ./services/billing-service
+      dockerfile: Dockerfile
+    container_name: geko-billing
+    ports:
+      - "3006:3006"
+    environment:
+      NODE_ENV: development
+      DB_HOST:  postgres
+      DB_PORT: 5432
+      DB_NAME:  geko_ai
+      DB_USER: geko
+      DB_PASSWORD: ${DB_PASSWORD:-dev-password}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      PORT: 3006
+    depends_on:
+      postgres: 
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3006/health"]
+      interval: 10s
+      timeout:  5s
+      retries:  5
+    networks:
+      - geko-network
+
+  memory-service:
+    build: 
+      context: ./services/memory-service
+      dockerfile: Dockerfile
+    container_name: geko-memory
+    ports:
+      - "3004:3004"
+    environment: 
+      NODE_ENV: development
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      PORT: 3004
+    depends_on:
+      redis: 
+        condition: service_healthy
+    healthcheck:
+      test:  ["CMD", "curl", "-f", "http://localhost:3004/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - geko-network
+
+  # ========== API GATEWAY (ORCHESTRATOR) ==========
+  api-gateway:
+    build:
+      context: ./services/ai-gateway
+      dockerfile: Dockerfile
+    container_name: geko-gateway
+    ports:
+      - "3002:3002"
+    environment: 
+      NODE_ENV: development
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: geko_ai
+      DB_USER: geko
+      DB_PASSWORD: ${DB_PASSWORD:-dev-password}
+      LIBRECHAT_URL: http://librechat:3080
+      AUTH_SERVICE_URL: http://auth-service:3001
+      WORKSPACE_SERVICE_URL: http://workspace-service:3003
+      MODEL_SERVICE_URL: http://model-service:3005
+      BILLING_SERVICE_URL: http://billing-service:3006
+      MEMORY_SERVICE_URL: http://memory-service:3004
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-key}
+      PORT: 3002
+    depends_on:
+      postgres: 
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+      librechat:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - geko-network
+
+volumes:
+  postgres_data:
+  redis_data: 
+
+networks:
+  geko-network:
+    driver: bridge
