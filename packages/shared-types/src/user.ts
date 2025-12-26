@@ -1,57 +1,44 @@
 /**
- * User Type Definitions
+ * User Management
  * 
- * A User always belongs to exactly ONE Tenant.
- * Identity (userId + tenantId) is the key. 
+ * Users belong to a Tenant. 
+ * Users can have multiple Workspaces.
+ * User identity is (tenantId + userId)
  */
 
-export type UserRole = 'owner' | 'member' | 'admin'
-export type UserStatus = 'active' | 'inactive' | 'deleted'
+import type { UUID, Timestamp } from './common';
 
+/**
+ * User entity
+ */
 export interface User {
-  userId: string
-  tenantId: string
-  email: string
-  name?:  string
-  role: UserRole
-  status: UserStatus
-  lastLoginAt?: number
-  createdAt: number
-  updatedAt: number
-  metadata?: Record<string, unknown>
-}
-
-export interface UserLoginRecord {
-  userId: string
-  tenantId: string
-  loginAt: number
-  ipAddress?:  string
-  userAgent?: string
+  userId:  string;
+  tenantId:  string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  emailVerified: boolean;
+  status: 'active' | 'suspended' | 'deleted';
+  lastLoginAt?: Timestamp;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
 }
 
 /**
- * Local auth (username + password)
- * Stored in DB, hashed
+ * Database representation (has passwordHash)
+ * Never exposed in API responses
  */
-export interface LocalAuthCredential {
-  userId: string
-  email: string
-  passwordHash: string
-  createdAt: number
-  lastChangedAt: number
+export interface UserWithPassword extends User {
+  passwordHash:  string;
 }
 
 /**
- * OAuth external identity
- * Links external provider (Google, GitHub) to user
+ * User profile (public data)
  */
-export interface OAuthProvider {
-  userId: string
-  provider: 'google' | 'github'
-  providerId: string
-  accessToken?:  string
-  refreshToken?: string
-  expiresAt?: number
-  createdAt: number
-  updatedAt: number
+export interface UserProfile {
+  userId: string;
+  email: string;
+  firstName?:  string;
+  lastName?: string;
+  avatar?: string;
 }

@@ -1,11 +1,14 @@
 {
   "name": "@packages/shared-types",
   "version": "0.0.1",
+  "description":  "Shared TypeScript types and interfaces",
   "private": true,
   "type": "module",
+  "main": "dist/index.js",
   "types": "./dist/index.d.ts",
   "exports" : {
      ".": {
+      "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
     }
   },

@@ -1,23 +1,18 @@
 /**
- * Shared Types Export
+ * Shared Types & Interfaces
  * 
- * All types exported here are available to all services.
- * Import from '@shared-types' in any service. 
- * 
- * @example
- * ```ts
- * import { Tenant, User, createLogger } from '@shared-types'
- * ```
+ * Single source of truth for all types across GEKO-AI services
+ * Follows SOLID principles:  no duplication, clear separation
  */
 
-// Types
-export type { Tenant, Plan, TenantStatus, TenantQuota } from './tenant'
-export { DEFAULT_QUOTAS } from './tenant'
-
-export type { User, UserRole, UserStatus, LocalAuthCredential, OAuthProvider } from './user'
-
-export type { JWTPayload, TokenResponse, TokenError, TokenResult, TokenPayload, Session } from './token'
-
-export type { RequestContext, RequestContextRequired } from './request'
-// Side-effect import for global augmentation
-import './express'
+export * from './common';
+export * from './auth';
+export * from './tenant';
+export * from './user';
+export * from './workspace';
+export * from './model';
+export * from './billing';
+export * from './rbac';
+export * from './audit';
+export * from './conversation';
+export * from './errors';

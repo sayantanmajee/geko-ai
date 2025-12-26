@@ -1,54 +1,45 @@
 /**
- * Tenant Type Definitions
+ * Tenant Management
  * 
- * A Tenant is the top-level isolation boundary. 
- * All data, users, and operations are scoped to a tenant.
+ * A tenant is a complete isolated environment for an organization. 
+ * All data in GEKO-AI is scoped to a tenant.
  * 
- * Rule: Every database query MUST filter by tenantId. 
+ * Isolation rules:
+ * - No cross-tenant queries
+ * - No cross-tenant user access
+ * - All RLS policies filter by tenantId
  */
 
-export type Plan = 'free' | 'pro' | 'enterprise'
-export type TenantStatus = 'active' | 'suspended' | 'deleted'
+import type { UUID, Timestamp } from './common';
 
+/**
+ * Tenant entity (organization)
+ */
 export interface Tenant {
-  tenantId: string
-  name:  string
-  plan: Plan
-  status: TenantStatus
-  createdAt: number
-  updatedAt: number
-  metadata?: Record<string, unknown>
+  tenantId: string;
+  name: string;
+  slug: string;           // URL-friendly identifier
+  status: 'active' | 'suspended' | 'deleted';
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
 }
 
-export interface TenantQuota {
-  tenantId: string
-  plan: Plan
-  requestsPerDay: number
-  tokensPerDay: number
-  maxTools: number
-  customModels: boolean
+/**
+ * Create tenant input
+ */
+export interface CreateTenantInput {
+  name:  string;
+  slug: string;
 }
 
-export const DEFAULT_QUOTAS: Record<Plan, Omit<TenantQuota, 'tenantId'>> = {
-  free: {
-    plan: 'free',
-    requestsPerDay: 100,
-    tokensPerDay: 10_000,
-    maxTools: 3,
-    customModels: false,
-  },
-  pro: {
-    plan: 'pro',
-    requestsPerDay: 10_000,
-    tokensPerDay: 500_000,
-    maxTools: 20,
-    customModels: true,
-  },
-  enterprise:  {
-    plan: 'enterprise',
-    requestsPerDay:  -1, // unlimited
-    tokensPerDay: -1,
-    maxTools: -1,
-    customModels:  true,
-  },
+/**
+ * Tenant metadata for analytics
+ */
+export interface TenantStats {
+  tenantId: string;
+  totalUsers: number;
+  totalWorkspaces: number;
+  activeWorkspacesCount: number;
+  totalTokensUsedThisMonth: number;
+  totalCostThisMonth: number;
 }
