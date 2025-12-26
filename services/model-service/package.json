@@ -1,7 +1,7 @@
 {
-  "name":  "@service/ai-gateway",
+  "name":  "@service/model-service",
   "version": "0.0.1",
-  "description":  "ai gateway",
+  "description":  "model service",
   "type": "module",
   "private": true,
   "main": "dist/server.js",

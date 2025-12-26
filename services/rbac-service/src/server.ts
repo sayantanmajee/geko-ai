@@ -1,7 +1,7 @@
 /**
- * ai gateway Service
+ * ruac service Service
  * 
- * Port: 3002
+ * Port: 3007
  * TODO: Add service-specific documentation
  */
 
@@ -14,9 +14,9 @@ import { asyncHandler } from '@packages/shared-utils/errors';
 import { healthRouter } from './routes/health.js';
 import { errorHandler } from './middleware/error-handler.js';
 
-const PORT = parseInt(process.env.PORT || '3002');
+const PORT = parseInt(process.env.PORT || '3007');
 const NODE_ENV = process.env.NODE_ENV || 'development';
-const logger = createLogger('ai-gateway');
+const logger = createLogger('rbac-service');
 
 const app: Express = express();
 
@@ -63,7 +63,7 @@ app.use(errorHandler);
 const server = app.listen(PORT, () => {
   logger.info(
     { port: PORT, env: NODE_ENV },
-    'ai gateway Service started'
+    'ruac service Service started'
   );
 });
 

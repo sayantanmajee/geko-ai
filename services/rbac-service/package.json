@@ -1,7 +1,7 @@
 {
-  "name":  "@service/ai-gateway",
+  "name":  "@service/rbac-service",
   "version": "0.0.1",
-  "description":  "ai gateway",
+  "description":  "ruac service",
   "type": "module",
   "private": true,
   "main": "dist/server.js",
