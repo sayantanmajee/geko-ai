@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/opt/homebrew/bin/bash
 
 #  ============================================================
 # GEKO-AI Service Scaffolding Script
@@ -16,6 +16,7 @@ NC='\033[0m'
 
 # Services configuration
 declare -A SERVICES
+
 SERVICES[workspace-service]="3003"
 SERVICES[model-service]="3005"
 SERVICES[billing-service]="3006"
@@ -73,13 +74,12 @@ for SERVICE in "${!SERVICES[@]}"; do
     "@types/express": "^4.17.21",
     "@types/node":  "^20.10.6",
     "@types/jest": "^29.5.8",
-    "typescript": "^5.3.0",
     "@typescript-eslint/eslint-plugin": "^6.10.0",
     "@typescript-eslint/parser": "^6.10.0",
     "jest": "^29.7.0",
     "ts-jest": "^29.1.1",
     "ts-node": "^10.9.1",
-    "typescript": "^5.2.2"
+    "typescript": "^5.2.2",
     "tsx": "^4.7.0",
     "eslint": "^8.55.0"
   }
@@ -135,8 +135,10 @@ CMD ["node", "dist/server.js"]
 EOF
   
   # Replace SERVICE_NAME and PORT in Dockerfile
-  sed -i "s/\$SERVICE_NAME/$SERVICE/g" "$SERVICE_PATH/Dockerfile"
-  sed -i "s/3000/$PORT/g" "$SERVICE_PATH/Dockerfile"
+#   sed -i "s/\$SERVICE_NAME/$SERVICE/g" "$SERVICE_PATH/Dockerfile"
+#   sed -i "s/3000/$PORT/g" "$SERVICE_PATH/Dockerfile"
+    sed -i '' "s@\${SERVICE_NAME}@${SERVICE}@g" "$SERVICE_PATH/Dockerfile"
+    sed -i '' "s@3000@${PORT}@g" "$SERVICE_PATH/Dockerfile"
 
   # ============================================================
   # src/server.ts
@@ -152,10 +154,10 @@ EOF
 import express, { Express, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import { createLogger } from '@package/shared-utils/logger';
-import { initializePool, closePool } from '@package/shared-utils/db';
-import { asyncHandler } from '@package/shared-utils/errors';
-import { healthRouter } from './routes/health. js';
+import { createLogger } from '@packages/shared-utils/logger';
+import { initializePool, closePool } from '@packages/shared-utils/db';
+import { asyncHandler } from '@packages/shared-utils/errors';
+import { healthRouter } from './routes/health.js';
 import { errorHandler } from './middleware/error-handler.js';
 
 const PORT = parseInt(process.env.PORT || '$PORT');
@@ -172,8 +174,8 @@ app.use(cors({
 }));
 
 // Body parsing
-app.use(express. json({ limit: '1mb' }));
-app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+app.use(express. json({ limit: '3mb' }));
+app.use(express.urlencoded({ extended: true, limit: '3mb' }));
 
 // Request logging
 app.use((req: Request, res: Response, next:  NextFunction) => {
@@ -252,7 +254,7 @@ healthRouter.get('/', (req: Request, res: Response<HealthResponse>) => {
   res.json({
     ok: true,
     service: process.env.SERVICE_NAME || 'service',
-    version: '0.1.0',
+    version: '0.0.1',
     timestamp: new Date().toISOString(),
   });
 });
