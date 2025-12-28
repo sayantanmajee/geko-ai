@@ -2,9 +2,9 @@
  * Authentication & Token Management
  * 
  * Multi-tenant safety rules: 
- * 1. tenantId is MANDATORY in every token
- * 2. Request context MUST validate tenantId matches
- * 3. Database queries MUST filter by tenantId
+ * 1.tenantId is MANDATORY in every token
+ * 2.Request context MUST validate tenantId matches
+ * 3.Database queries MUST filter by tenantId
  * 
  * Token lifecycle:
  * - AccessToken (15 min): Used for API requests
@@ -23,8 +23,8 @@ import type { UUID, Timestamp } from './common';
 export interface JWTPayload {
   // Standard JWT claims
   sub: string;          // Subject (userId)
-  iat: number;          // Issued at (unix timestamp)
-  exp: number;          // Expires at (unix timestamp)
+  // iat: number;          // Issued at (unix timestamp)
+  // exp: number;          // Expires at (unix timestamp)
   
   // Multi-tenant safety (MANDATORY)
   tenantId: string;     // Prevents cross-tenant access

@@ -10,7 +10,7 @@
  */
 
 import { Pool, PoolClient } from 'pg';
-import { createLogger } from '../logger/index';
+import { createLogger } from '../logger/index.js';
 
 const logger = createLogger('database');
 
@@ -22,13 +22,12 @@ let pool: Pool | null = null;
  */
 export function initializePool(): Pool {
   if (pool) return pool;
-
   pool = new Pool({
     user:  process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     host: process.env.DB_HOST,
     port: parseInt(process.env.DB_PORT || '5432'),
-    database: process. env.DB_NAME,
+    database: process.env.DB_NAME,
     
     // Connection pool config
     max: 20,                          // Max connections

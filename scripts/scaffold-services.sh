@@ -23,6 +23,7 @@ SERVICES[billing-service]="3006"
 SERVICES[rbac-service]="3007"
 SERVICES[memory-service]="3004"
 SERVICES[ai-gateway]="3002"
+SERVICES[auth-service]="3001"
 
 echo -e "${BLUE}🚀 GEKO-AI Service Scaffolding Started${NC}\n"
 
@@ -61,8 +62,8 @@ for SERVICE in "${!SERVICES[@]}"; do
     "db:migrate": "node scripts/migrate.js"
   },
   "dependencies": {
-    "@packages/shared-types": "workspace:*",
-    "@packages/shared-utils": "workspace:*",
+    "@package/shared-types": "workspace:*",
+    "@package/shared-utils": "workspace:*",
     "axios": "^1.6.2",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
@@ -71,6 +72,7 @@ for SERVICE in "${!SERVICES[@]}"; do
     "helmet": "^7.1.0"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.19",
     "@types/express": "^4.17.21",
     "@types/node":  "^20.10.6",
     "@types/jest": "^29.5.8",
@@ -154,11 +156,11 @@ EOF
 import express, { Express, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import { createLogger } from '@packages/shared-utils/logger';
-import { initializePool, closePool } from '@packages/shared-utils/db';
-import { asyncHandler } from '@packages/shared-utils/errors';
-import { healthRouter } from './routes/health.js';
-import { errorHandler } from './middleware/error-handler.js';
+import { createLogger } from '@package/shared-utils';
+import { initializePool, closePool } from '@package/shared-utils';
+// import { asyncHandler } from '@package/shared-utils';
+import { healthRouter } from './routes/health';
+import { errorHandler } from './middleware/error-handler';
 
 const PORT = parseInt(process.env.PORT || '$PORT');
 const NODE_ENV = process.env.NODE_ENV || 'development';
@@ -169,12 +171,12 @@ const app: Express = express();
 // Security
 app.use(helmet());
 app.use(cors({
-  origin: process.env.CORS_ORIGIN?. split(',') || '*',
+  origin: process.env.CORS_ORIGIN?.split(',') || '*',
   credentials: true,
 }));
 
 // Body parsing
-app.use(express. json({ limit: '3mb' }));
+app.use(express.json({ limit: '3mb' }));
 app.use(express.urlencoded({ extended: true, limit: '3mb' }));
 
 // Request logging
@@ -238,7 +240,7 @@ EOF
   # ============================================================
   # src/routes/health.ts
   # ============================================================
-  cat > "$SERVICE_PATH/src/routes/health. ts" <<'EOF'
+  cat > "$SERVICE_PATH/src/routes/health.ts" <<'EOF'
 /**
  * Health Check Endpoint
  * 
@@ -248,7 +250,7 @@ EOF
 import { Router, Request, Response } from 'express';
 import type { HealthResponse } from '@package/shared-types';
 
-export const healthRouter = Router();
+export const healthRouter: Router = Router();
 
 healthRouter.get('/', (req: Request, res: Response<HealthResponse>) => {
   res.json({
@@ -272,8 +274,8 @@ EOF
  */
 
 import { Request, Response, NextFunction } from 'express';
-import { AppError, sanitizeError } from '@package/shared-utils/errors';
-import { createLogger } from '@package/shared-utils/logger';
+import { AppError, sanitizeError } from '@package/shared-types';
+import { createLogger } from '@package/shared-utils';
 
 const logger = createLogger('error-handler');
 
@@ -319,6 +321,7 @@ export function errorHandler(
         process.env.NODE_ENV === 'development' ?  error.stack : undefined,
     },
   });
+  next();
 }
 EOF
 
@@ -327,7 +330,7 @@ done
 
 echo -e "${GREEN}✅ All services scaffolded!${NC}\n"
 echo -e "${BLUE}Next steps:${NC}"
-echo "1. Run: pnpm install"
-echo "2. Run: pnpm build"
-echo "3. Run: docker-compose -f infra/docker-compose.yml up"
+echo "1.Run: pnpm install"
+echo "2.Run: pnpm build"
+echo "3.Run: docker-compose -f infra/docker-compose.yml up"
 echo ""

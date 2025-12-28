@@ -113,7 +113,7 @@ Scope: Types, enums, interfaces
 
 Deliverables:
 
- Extend @packages/shared-types with:
+ Extend @package/shared-types with:
 
 Workspace, WorkspaceMember, WorkspaceRole types
 ModelCatalog, WorkspaceModel, ModelStatus types

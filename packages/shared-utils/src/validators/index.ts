@@ -54,7 +54,7 @@ export function isValidSlug(slug: string): boolean {
  * Returns validation result with message
  */
 export function validateEmail(email: string): { valid: boolean; error?: string } {
-  if (! email?. trim()) {
+  if (! email?.trim()) {
     return { valid: false, error: 'Email is required' };
   }
   if (!isValidEmail(email)) {

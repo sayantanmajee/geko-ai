@@ -9,7 +9,7 @@
  * - Database connectivity
  */
 
-export { logger, createLogger } from './logger/index';
+export { logger, createLogger } from './logger/index.js';
 export {
   hashPassword,
   verifyPassword,
@@ -17,14 +17,8 @@ export {
   signData,
   verifySignature,
   hashString,
-} from './crypto/index';
-export {
-  createAccessToken,
-  createRefreshToken,
-  verifyToken,
-  decodeToken,
-  extractToken,
-} from './jwt/index';
+} from './crypto/index.js';
+export * from './jwt/index.js';
 export {
   isValidEmail,
   isStrongPassword,
@@ -32,7 +26,7 @@ export {
   isValidSlug,
   validateEmail,
   validatePassword,
-} from './validators/index';
+} from './validators/index.js';
 export {
   initializePool,
   getPool,
@@ -42,4 +36,5 @@ export {
   getConnection,
   transaction,
   closePool,
-} from './db/index';
+} from './db/index.js';
+export { runMigrations, runSeeds } from './db/migrations.js';

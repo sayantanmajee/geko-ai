@@ -15,9 +15,9 @@ export class AppError extends Error {
     return {
       ok: false,
       error: {
-        code: this. code,
-        message: this. message,
-        details: this. details,
+        code: this.code,
+        message: this.message,
+        details: this.details,
       },
     };
   }
@@ -49,7 +49,7 @@ export class NotFoundError extends AppError {
 
 export class ConflictError extends AppError {
   constructor(message: string) {
-    super(ErrorCode. INVALID_REQUEST, message, HttpStatus.CONFLICT);
+    super(ErrorCode.INVALID_REQUEST, message, HttpStatus.CONFLICT);
   }
 }
 

@@ -6,8 +6,8 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
-import { AppError, sanitizeError } from '@package/shared-utils/errors';
-import { createLogger } from '@package/shared-utils/logger';
+import { AppError, sanitizeError } from '@package/shared-types';
+import { createLogger } from '@package/shared-utils';
 
 const logger = createLogger('error-handler');
 
@@ -53,4 +53,5 @@ export function errorHandler(
         process.env.NODE_ENV === 'development' ?  error.stack : undefined,
     },
   });
+  next();
 }

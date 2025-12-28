@@ -1,23 +1,24 @@
 {
-  "name": "@packages/shared-types",
+  "name": "@package/shared-types",
   "version": "0.0.1",
-  "description":  "Shared TypeScript types and interfaces",
+  "description": "Shared TypeScript types and interfaces",
   "private": true,
   "type": "module",
   "main": "dist/index.js",
   "types": "./dist/index.d.ts",
-  "exports" : {
-     ".": {
-      "import": "./dist/index.js",
+  "exports": {
+    ".": {
+      "import": "./dist/index.d.ts",
       "types": "./dist/index.d.ts"
     }
   },
   "scripts": {
-    "build": "tsc --moduleResolution node",
+    "build": "tsc -b",
     "clean": "rm -rf dist tsconfig.tsbuildinfo node_modules",
     "type-check": "tsc --noEmit"
   },
   "devDependencies": {
+    "@types/node": "^25.0.3",
     "typescript": "^5.9.2"
   }
 }

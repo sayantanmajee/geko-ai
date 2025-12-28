@@ -8,11 +8,11 @@
 import express, { Express, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import { createLogger } from '@packages/shared-utils/logger';
-import { initializePool, closePool } from '@packages/shared-utils/db';
-import { asyncHandler } from '@packages/shared-utils/errors';
-import { healthRouter } from './routes/health.js';
-import { errorHandler } from './middleware/error-handler.js';
+import { createLogger } from '@package/shared-utils';
+import { initializePool, closePool } from '@package/shared-utils';
+// import { asyncHandler } from '@package/shared-utils';
+import { healthRouter } from './routes/health';
+import { errorHandler } from './middleware/error-handler';
 
 const PORT = parseInt(process.env.PORT || '3005');
 const NODE_ENV = process.env.NODE_ENV || 'development';
