@@ -1,0 +1,283 @@
+# GEKO-AI Platform - Docker Compose Configuration
+# 
+# Services:
+# - PostgreSQL:  Main database
+# - MongoDB: LibreChat conversations
+# - Redis: Caching & sessions
+# - LibreChat:  Headless AI backend
+# - Auth Service: User authentication
+# - API Gateway: Request orchestration
+# - Workspace Service:  Team management
+# - Model Service: AI model catalog
+# - Billing Service: Usage & quotas
+# - RBAC Service:  Permissions
+# - Memory Service: Cache service
+
+
+services:
+  # =========================================================================
+  # DATABASES & CACHE
+  # =========================================================================
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: geko-postgres
+    restart: unless-stopped
+    environment: 
+      POSTGRES_USER: ${DB_USER:-geko}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-dev-password}
+      POSTGRES_DB: ${DB_NAME:-geko_ai}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=en_US.UTF-8"
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes: 
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/01_init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-geko} -d ${DB_NAME:-geko_ai}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - geko-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  mongodb:
+    image: mongo:latest
+    container_name:  geko-mongodb
+    restart:  unless-stopped
+    environment: 
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-dev-password}
+      MONGO_INITDB_DATABASE: librechat
+    ports:
+      - "${MONGO_PORT:-27017}:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - geko-network
+    logging: 
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  redis:
+    image:  redis:7-alpine
+    container_name: geko-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-dev-password}
+    ports: 
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck: 
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - geko-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # =========================================================================
+  # AI BACKEND
+  # =========================================================================
+
+  # librechat:
+  #   build: 
+  #     context: ./services/librechat-backend
+  #     dockerfile: Dockerfile
+  #   container_name: geko-librechat
+  #   restart: unless-stopped
+  #   environment:
+  #     NODE_ENV: ${NODE_ENV:-production}
+  #     PORT: 3080
+  #     HOST: 0.0.0.0
+      
+  #     # MongoDB connection
+  #     MONGO_URI:  mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD:-dev-password}@mongodb:27017/librechat?authSource=admin
+      
+  #     # LLM Provider Keys
+  #     OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+  #     ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+  #     GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+  #     DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      
+  #     # LibreChat specific
+  #     MEILI_NO_ANALYTICS: "true"
+  #     LOG_LEVEL: ${LOG_LEVEL:-info}
+  #   ports:
+  #     - "3080:3080"
+  #   depends_on:
+  #     mongodb:
+  #       condition: service_healthy
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:3080/health"]
+  #     interval: 15s
+  #     timeout: 10s
+  #     retries: 5
+  #     start_period: 20s
+  #   networks:
+  #     - geko-network
+  #   logging: 
+  #     driver: "json-file"
+  #     options:
+  #       max-size: "10m"
+  #       max-file: "3"
+
+  # =========================================================================
+  # GEKO-AI SERVICES (Built from root Dockerfile)
+  # =========================================================================
+
+  geko-services:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NODE_ENV: ${NODE_ENV:-development}
+    image: geko-ai:latest
+    container_name: geko-services
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      
+      # Database
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-geko_ai}
+      DB_USER: ${DB_USER:-geko}
+      DB_PASSWORD: ${DB_PASSWORD:-dev-password}
+      
+      # MongoDB
+      MONGO_URI: mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD:-dev-password}@mongodb:27017/librechat?authSource=admin
+      
+      # Redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-dev-password}
+      
+      # Security
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-key-change-in-production}
+      JWT_EXPIRE_IN: 24h
+      
+      # Service URLs (internal Docker networking)
+      # LIBRECHAT_URL: http://librechat:3080
+      AUTH_SERVICE_URL: http://localhost:3001
+      WORKSPACE_SERVICE_URL: http://localhost:3003
+      MODEL_SERVICE_URL: http://localhost:3005
+      BILLING_SERVICE_URL: http://localhost:3006
+      RBAC_SERVICE_URL: http://localhost:3007
+      MEMORY_SERVICE_URL:  http://localhost:3004
+      
+      # API Keys (LLM Providers)
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      
+      # Stripe
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+    ports:
+      # Auth Service
+      - "3001:3001"
+      # AI Gateway
+      - "3002:3002"
+      # Workspace Service
+      - "3003:3003"
+      # Memory Service
+      - "3004:3004"
+      # Model Service
+      - "3005:3005"
+      # Billing Service
+      - "3006:3006"
+      # RBAC Service
+      - "3007:3007"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mongodb:
+        condition:  service_healthy
+      redis: 
+        condition: service_healthy
+      # librechat:
+      #   condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/health || exit 1"]
+      interval:  30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - geko-network
+    logging: 
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    volumes:
+      # Mount logs for debugging
+      - ./logs:/app/logs
+      # Mount uploads
+      - ./uploads:/app/uploads
+      # Mount . env for runtime config
+      - . /. env:/app/.env:ro
+
+  # =========================================================================
+  # OPTIONAL: NGINX REVERSE PROXY (uncomment if needed)
+  # =========================================================================
+  # nginx:
+  #   image: nginx:alpine
+  #   container_name: geko-nginx
+  #   restart: unless-stopped
+  #   ports: 
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+  #   depends_on:
+  #     - geko-services
+  #     - librechat
+  #   networks:
+  #     - geko-network
+
+# ============================================================================
+# VOLUMES
+# ============================================================================
+volumes: 
+  postgres_data:
+    driver: local
+  mongodb_data:
+    driver: local
+  mongodb_config:
+    driver: local
+  redis_data:
+    driver: local
+
+# ============================================================================
+# NETWORKS
+# ============================================================================
+networks: 
+  geko-network: 
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.25.0.0/16

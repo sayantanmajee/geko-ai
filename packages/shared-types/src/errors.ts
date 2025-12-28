@@ -75,6 +75,22 @@ export class AppError extends Error {
   }
 }
 
+/**
+ * Sanitize error for client response
+ * Removes sensitive information from errors
+ */
+export function sanitizeError(error: AppError): Record<string, any> {
+  return {
+    ok: false,
+    error: {
+      code: error.code,
+      message: error.message,
+      // Don't expose details in production
+      details: process.env.NODE_ENV === 'development' ? error.details : undefined,
+    },
+  };
+}
+
 export class ValidationError extends AppError {
   constructor(message: string, details?: any) {
     super(ErrorCode.INVALID_REQUEST, message, HttpStatus.BAD_REQUEST, details);
@@ -101,7 +117,7 @@ export class NotFoundError extends AppError {
 
 export class ConflictError extends AppError {
   constructor(message: string) {
-    super(ErrorCode. INVALID_REQUEST, message, HttpStatus.CONFLICT);
+    super(ErrorCode.INVALID_REQUEST, message, HttpStatus.CONFLICT);
   }
 }
 

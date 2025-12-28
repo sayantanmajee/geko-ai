@@ -1,39 +1,19 @@
 {
-    "name": "@packages/shared-utils",
+    "name": "@package/shared-utils",
     "version": "0.0.1",
+    "type": "module",
     "private": true,
     "description": "Shared utilities and helpers",
-    "type": "module",
     "main": "./dist/index.js",
     "types": "./dist/index.d.ts",
     "exports": {
         ".": {
             "import": "./dist/index.js",
             "types": "./dist/index.d.ts"
-        },
-        "./logger": {
-            "import": "./dist/logger/index.js",
-            "types": "./dist/logger/index.d.ts"
-        },
-        "./crypto": {
-            "import": "./dist/crypto/index.js",
-            "types": "./dist/crypto/index.d.ts"
-        },
-        "./jwt": {
-            "import": "./dist/jwt/index.js",
-            "types": "./dist/jwt/index.d.ts"
-        },
-        "./validators": {
-            "import": "./dist/validators/index.js",
-            "types": "./dist/validators/index.d.ts"
-        },
-        "./db": {
-            "import": "./dist/db/index.js",
-            "types": "./dist/db/index.d.ts"
         }
     },
     "scripts": {
-        "build": "tsc --moduleResolution node",
+        "build": "tsc -b",
         "clean": "rm -rf dist tsconfig.tsbuildinfo node_modules",
         "type-check": "tsc --noEmit"
     },
@@ -43,7 +23,7 @@
         "pino": "^8.16.2"
     },
     "devDependencies": {
-        "@packages/shared-types": "workspace:*",
+        "@package/shared-types": "workspace:*",
         "@types/jsonwebtoken": "^9.0.10",
         "@types/node": "^20.10.6",
         "@types/pg": "^8.16.0",

@@ -8,11 +8,11 @@
 import express, { Express, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import { createLogger } from '@packages/shared-utils/logger';
-import { initializePool, closePool } from '@packages/shared-utils/db';
-import { asyncHandler } from '@packages/shared-utils/errors';
-import { healthRouter } from './routes/health.js';
-import { errorHandler } from './middleware/error-handler.js';
+import { createLogger } from '@package/shared-utils';
+import { initializePool, closePool } from '@package/shared-utils';
+// import { asyncHandler } from '@package/shared-utils';
+import { healthRouter } from './routes/health';
+import { errorHandler } from './middleware/error-handler';
 
 const PORT = parseInt(process.env.PORT || '3006');
 const NODE_ENV = process.env.NODE_ENV || 'development';
@@ -23,12 +23,12 @@ const app: Express = express();
 // Security
 app.use(helmet());
 app.use(cors({
-  origin: process.env.CORS_ORIGIN?. split(',') || '*',
+  origin: process.env.CORS_ORIGIN?.split(',') || '*',
   credentials: true,
 }));
 
 // Body parsing
-app.use(express. json({ limit: '3mb' }));
+app.use(express.json({ limit: '3mb' }));
 app.use(express.urlencoded({ extended: true, limit: '3mb' }));
 
 // Request logging

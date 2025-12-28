@@ -15,7 +15,7 @@ export interface RequestContext {
   role?: string
 
   // Timing
-  startTime: number // Date. now()
+  startTime: number // Date.now()
 
   // Metadata (optional, added by middleware)
   metadata?: Record<string, unknown>
